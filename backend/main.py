@@ -26,7 +26,7 @@ def find_wins(board):
     for row in range(ROWS):
         for col in range(COLS):
 
-            player = board[row][col]
+            player = board[col][row]
 
             if player == 0:
                 continue
@@ -54,10 +54,10 @@ def evaluate_board_state(state: State):
 
     winner = find_wins(board)
 
-    if wins != 0:
+    if winner != 0:
         return {"winner": winner}
 
     if tied(board):
-        return {"tied"}
+        return {"tied": "ok"}
 
-    return {"in_progress"}
+    return {"in_progress": "ok"}
