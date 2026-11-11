@@ -15,6 +15,11 @@ CONNECT = 4
 class State(BaseModel):
     board: list[list[Cell]]
 
+class EvaluateBoardResponse(BaseModel):
+    status: Literal["in_progress", "won", "tied"]
+    winner: Player | None = None
+    next_player: Player | None = None
+
 def validate(board):
     if len(board) != ROWS or any(len(row) != COLS for row in board):
         raise HTTPException(422, "Board does not comply")
@@ -55,9 +60,9 @@ def evaluate_board_state(state: State):
     winner = find_wins(board)
 
     if winner != 0:
-        return {"winner": winner}
+        return EvaluateBoardResponse(status="won", winner=winner)
 
     if tied(board):
-        return {"tied": "ok"}
+        return EvaluateBoardResponse(status="tied")
 
-    return {"in_progress": "ok"}
+    return EvaluateBoardResponse(status="in_progress")
