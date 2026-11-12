@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { ROWS, COLS,
-  createBoard, dropPiece, evaluateBoard, Board, Player, EvaluateBoardResponse } from "./game";
-import BoardComponent from "./Board"
+import {
+  createBoard,
+  dropPiece,
+  evaluateBoard,
+  type Board,
+  type EvaluateBoardResponse,
+  type Player,
+} from "./game";
+import BoardComponent from "./Board";
 
 const START: EvaluateBoardResponse = {
   status: "in_progress",
   next_player: 1,
   winner: null,
-}
-
+  winning_cells: [],
+  detail: null,
+};
 
 export default function App() {
   const [board, setBoard] = useState<Board>(createBoard());
@@ -16,6 +23,9 @@ export default function App() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const player = result.next_player;
+  const winning = new Set(
+    (result.winning_cells ?? []).map(([row, col]) => `${row}-${col}`),
+  );
 
   async function play(col: number) {
     if (pending || player === null) return;
@@ -24,17 +34,16 @@ export default function App() {
     setPending(true);
     setError(null);
     try {
-      const result = await evaluateBoard(next);
+      const evaluation = await evaluateBoard(next);
       setBoard(next);
-      setResult(result);
-    } catch (error) {
-      setError(`Server rejected the board (${error})`);
+      setResult(evaluation);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Server rejected the board";
+      setError(message);
     } finally {
       setPending(false);
     }
   }
-
-  // Again, sorry about the AI auto-complete. I'm reviewing every line and just clicking enter if that's what I was going to do anyway.
 
   function reset() {
     setBoard(createBoard());
@@ -44,24 +53,44 @@ export default function App() {
   }
 
   let status: string;
-  if (result.status === "won") {
-    status = `Player ${result.winner} wins!`;
+  if (pending) {
+    status = "Checking the board…";
+  } else if (result.status === "won") {
+    status = `${playerName(result.winner)} wins`;
   } else if (result.status === "tied") {
-    status = "Tied game!";
+    status = "Draw";
+  } else if (result.status === "impossible") {
+    status = result.detail ?? "This position is impossible";
   } else {
-    status = `Player ${result.next_player} to play`;
+    status = `${playerName(result.next_player)} to play`;
   }
-  
-  
+
   return (
     <main>
       <h1>Connect Four</h1>
-      
+      <p className="status" role="status">
+        {status}
+      </p>
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <BoardComponent
-        board = {board}
-        disabled = {pending || player === null}
-        onDrop = {play}/>
-
+        board={board}
+        disabled={pending || player === null}
+        winning={winning}
+        onDrop={play}
+      />
+      <button type="button" className="reset" onClick={reset}>
+        New game
+      </button>
     </main>
   );
+}
+
+function playerName(player: Player | null): string {
+  if (player === 1) return "Blue";
+  if (player === 2) return "Red";
+  return "Nobody";
 }

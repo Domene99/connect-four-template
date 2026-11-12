@@ -1,0 +1,8 @@
+# Virtualenv created in this directory. Do not ignore the application source.
+bin/
+include/
+lib/
+pyvenv.cfg
+.venv/
+__pycache__/
+.pytest_cache/

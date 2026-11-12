@@ -1,0 +1,105 @@
+:root {
+  color: #0f172a;
+  background: #f1f5f9;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  box-sizing: border-box;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+}
+
+.status {
+  min-height: 1.5rem;
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.error {
+  margin: 0 0 1rem;
+  color: #991b1b;
+}
+
+.board {
+  display: flex;
+  gap: 0.5rem;
+  width: fit-content;
+  padding: 0.75rem;
+  background: #1d4ed8;
+  border-radius: 0.75rem;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.column:disabled {
+  cursor: not-allowed;
+}
+
+.column:not(:disabled):hover .cell[data-player="0"] {
+  background: #dbeafe;
+}
+
+.column:focus-visible {
+  outline: 3px solid #facc15;
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.cell {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 2px rgb(30 64 175 / 30%);
+}
+
+.cell[data-player="1"] {
+  background: #2563eb;
+}
+
+.cell[data-player="2"] {
+  background: #dc2626;
+}
+
+.cell.winning {
+  box-shadow: 0 0 0 4px #facc15;
+}
+
+.reset {
+  margin-top: 1rem;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #0f172a;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .cell {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
