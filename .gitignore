@@ -22,3 +22,5 @@ coverage/
 # Local environment
 .env
 .env.*
+
+package-lock.json

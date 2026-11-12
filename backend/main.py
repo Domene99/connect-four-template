@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Literal 
+from typing import Literal, Optional 
 
 app = FastAPI(title="Connect Four")
 
@@ -17,8 +17,8 @@ class State(BaseModel):
 
 class EvaluateBoardResponse(BaseModel):
     status: Literal["in_progress", "won", "tied"]
-    winner: Player | None = None
-    next_player: Player | None = None
+    winner: Optional[Player]
+    next_player: Optional[Player]
 
 def validate(board):
     if len(board) != ROWS or any(len(row) != COLS for row in board):

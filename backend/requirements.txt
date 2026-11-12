@@ -1,5 +1,5 @@
 fastapi>=0.115
-uvicorn[standard]>=0.32
+uvicorn>=0.5
 pytest>=8
 httpx2
 pydantic==2.12.5
