@@ -57,6 +57,18 @@ def evaluate(board: list[list[int]]) -> Evaluation:
     return Evaluation(status="in_progress", next_player=1 if blue == red else 2)
 
 
+def drop(board: list[list[int]], col: int, player: int) -> list[list[int]]:
+    """Return a copy of the board with ``player``'s piece in the lowest open slot."""
+    if not 0 <= col < COLS:
+        raise ValueError("Column must be between 0 and 6")
+    for row in range(ROWS - 1, -1, -1):
+        if board[row][col] == 0:
+            result = [list(line) for line in board]
+            result[row][col] = player
+            return result
+    raise ValueError("That column is full")
+
+
 def _validate_shape(board: list[list[int]]) -> None:
     if len(board) != ROWS or any(len(row) != COLS for row in board):
         raise ValueError("Board must have 6 rows and 7 columns")
@@ -121,3 +133,27 @@ def _last_move_could_complete(
 
 def _impossible(detail: str) -> Evaluation:
     return Evaluation(status="impossible", detail=detail)
+
+
+class Match:
+    """One game between two players, advanced one move at a time.
+
+    The board is re-evaluated after every move, so ``evaluation`` always
+    describes the current position and whose turn it is.
+    """
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.board = [[0] * COLS for _ in range(ROWS)]
+        self.evaluation = evaluate(self.board)
+
+    def move(self, player: int, col: int) -> None:
+        if self.evaluation.status != "in_progress":
+            raise ValueError("The game is over")
+        if self.evaluation.next_player != player:
+            raise ValueError("It is not your turn")
+        board = drop(self.board, col, player)
+        self.board = board
+        self.evaluation = evaluate(board)

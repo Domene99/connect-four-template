@@ -5,7 +5,9 @@ export type Player = 1 | 2;
 export type Cell = 0 | 1 | 2;
 export type Board = Cell[][];
 
-export type EvaluateBoardResponse = {
+// The backend's verdict on a position, as returned by /evaluate_board_state
+// and included in every WebSocket state message.
+export type Evaluation = {
   status: "in_progress" | "won" | "tied" | "impossible";
   winner: Player | null;
   next_player: Player | null;
@@ -17,45 +19,8 @@ export function createBoard(): Board {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 }
 
-// Lowest open row in this column, or -1 when the column is full.
-export function landingRow(board: Board, col: number): number {
-  for (let row = ROWS - 1; row >= 0; row--) {
-    if (board[row][col] === 0) {
-      return row;
-    }
-  }
-  return -1;
-}
-
-export function dropPiece(board: Board, col: number, player: Player): Board | null {
-  const row = landingRow(board, col);
-  if (row === -1) return null;
-
-  const next = board.map((line) => [...line]);
-  next[row][col] = player;
-  return next;
-}
-
-export async function evaluateBoard(board: Board): Promise<EvaluateBoardResponse> {
-  const response = await fetch("/evaluate_board_state", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ board }),
-  });
-  if (!response.ok) {
-    throw new Error(await readError(response));
-  }
-  return response.json() as Promise<EvaluateBoardResponse>;
-}
-
-async function readError(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    if (typeof body?.detail === "string") return body.detail;
-  } catch {
-    // The body was empty or not JSON.
-  }
-  return `Server rejected the board (${response.status})`;
+export function playerName(player: Player | null): string {
+  if (player === 1) return "Blue";
+  if (player === 2) return "Red";
+  return "Nobody";
 }

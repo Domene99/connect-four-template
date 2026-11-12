@@ -1,96 +1,113 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createBoard, playerName } from "./game";
 import {
-  createBoard,
-  dropPiece,
-  evaluateBoard,
-  type Board,
-  type EvaluateBoardResponse,
-  type Player,
-} from "./game";
+  roomFromUrl,
+  socketUrl,
+  tabToken,
+  type ClientMessage,
+  type GameState,
+  type ServerMessage,
+} from "./room";
 import BoardComponent from "./Board";
 
-const START: EvaluateBoardResponse = {
-  status: "in_progress",
-  next_player: 1,
-  winner: null,
-  winning_cells: [],
-  detail: null,
-};
+const EMPTY_BOARD = createBoard();
 
 export default function App() {
-  const [board, setBoard] = useState<Board>(createBoard());
-  const [result, setResult] = useState<EvaluateBoardResponse>(START);
-  const [pending, setPending] = useState(false);
+  const [room] = useState(roomFromUrl);
+  const socket = useRef<WebSocket | null>(null);
+  const [game, setGame] = useState<GameState | null>(null);
+  const [closed, setClosed] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const player = result.next_player;
+
+  useEffect(() => {
+    const ws = new WebSocket(socketUrl(room, tabToken()));
+    socket.current = ws;
+    ws.onmessage = (event: MessageEvent<string>) => {
+      const message: ServerMessage = JSON.parse(event.data);
+      if (message.type === "state") {
+        setGame(message);
+        setError(null);
+      } else {
+        setError(message.detail);
+      }
+    };
+    ws.onclose = () => setClosed(true);
+    return () => {
+      // Detach first: closing our own socket is not a lost connection.
+      ws.onmessage = null;
+      ws.onclose = null;
+      ws.close();
+    };
+  }, [room]);
+
+  function send(message: ClientMessage) {
+    socket.current?.send(JSON.stringify(message));
+  }
+
+  const evaluation = game?.evaluation ?? null;
+  const myTurn = game !== null && evaluation?.next_player === game.you;
+  const waiting = game !== null && !game.opponent_connected;
   const winning = new Set(
-    (result.winning_cells ?? []).map(([row, col]) => `${row}-${col}`),
+    (evaluation?.winning_cells ?? []).map(([row, col]) => `${row}-${col}`),
   );
 
-  async function play(col: number) {
-    if (pending || player === null) return;
-    const next = dropPiece(board, col, player);
-    if (next === null) return;
-    setPending(true);
-    setError(null);
-    try {
-      const evaluation = await evaluateBoard(next);
-      setBoard(next);
-      setResult(evaluation);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Server rejected the board";
-      setError(message);
-    } finally {
-      setPending(false);
-    }
-  }
-
-  function reset() {
-    setBoard(createBoard());
-    setResult(START);
-    setError(null);
-    setPending(false);
-  }
-
   let status: string;
-  if (pending) {
-    status = "Checking the board…";
-  } else if (result.status === "won") {
-    status = `${playerName(result.winner)} wins`;
-  } else if (result.status === "tied") {
+  if (closed) {
+    status = error ?? "Connection lost. Reload the page to rejoin.";
+  } else if (game === null || evaluation === null) {
+    status = "Connecting…";
+  } else if (evaluation.status === "won") {
+    status = evaluation.winner === game.you ? "You win" : `${playerName(evaluation.winner)} wins`;
+  } else if (evaluation.status === "tied") {
     status = "Draw";
-  } else if (result.status === "impossible") {
-    status = result.detail ?? "This position is impossible";
+  } else if (evaluation.status === "impossible") {
+    status = evaluation.detail ?? "This position is impossible";
+  } else if (waiting) {
+    status = "Waiting for an opponent to join";
   } else {
-    status = `${playerName(result.next_player)} to play`;
+    status = myTurn ? "Your turn" : `${playerName(evaluation.next_player)}'s turn`;
   }
 
   return (
     <main>
       <h1>Connect Four</h1>
+      {game ? (
+        <p className="you">
+          You are <span className="chip" data-player={game.you} /> {playerName(game.you)}
+        </p>
+      ) : null}
       <p className="status" role="status">
         {status}
       </p>
-      {error ? (
+      {error && !closed ? (
         <p className="error" role="alert">
           {error}
         </p>
       ) : null}
+      {waiting && !closed ? (
+        <label className="invite">
+          Share this link with your opponent
+          <input
+            readOnly
+            value={window.location.href}
+            onFocus={(event) => event.target.select()}
+          />
+        </label>
+      ) : null}
       <BoardComponent
-        board={board}
-        disabled={pending || player === null}
+        board={game?.board ?? EMPTY_BOARD}
+        disabled={closed || !myTurn || waiting}
         winning={winning}
-        onDrop={play}
+        onDrop={(col) => send({ type: "move", col })}
       />
-      <button type="button" className="reset" onClick={reset}>
+      <button
+        type="button"
+        className="reset"
+        disabled={closed || game === null}
+        onClick={() => send({ type: "reset" })}
+      >
         New game
       </button>
     </main>
   );
-}
-
-function playerName(player: Player | null): string {
-  if (player === 1) return "Blue";
-  if (player === 2) return "Red";
-  return "Nobody";
 }

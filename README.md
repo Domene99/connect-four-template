@@ -65,9 +65,18 @@ pip install -r requirements.txt
 uvicorn main:app --port 8080
 ```
 
-The frontend dev server forwards requests for `/evaluate_board_state` to
-`http://localhost:8080`, so the browser can call the backend without any CORS setup. Call it
-with a relative URL, for example `fetch("/evaluate_board_state", ...)`.
+The frontend dev server forwards requests for `/evaluate_board_state` and the `/ws`
+WebSocket to `http://localhost:8080`, so the browser can call the backend without any CORS
+setup. Call it with a relative URL, for example `fetch("/evaluate_board_state", ...)`.
+
+### Playing against someone else
+
+Start both servers, open http://localhost:5173 and the page puts a `?room=` code in the
+address bar. Send that URL to your opponent (or open it in a second tab to try it alone).
+The first player to arrive is Blue, the second is Red, and a third visitor is told the game
+is full. Moves are checked and applied on the server, which pushes the board to both players
+over a WebSocket, so both screens always show the same game. Refreshing keeps your seat and
+the board; leaving frees your seat for the next person to open the link.
 
 ## Rules
 
@@ -272,3 +281,23 @@ submissions to your application, and your Zoom recording is attached to your app
 automatically.
 
 Questions? Reply to the email we sent you.
+
+## Stage 2
+
+Added remote two-player play over WebSockets, with an AI coding agent.
+
+- **Why this.** Taking turns on one screen was the Stage 1 brief, but the natural next step
+  for a Connect Four app is playing a friend from another machine. It is also the change that
+  most exercises the backend: it has to own the board and enforce turns rather than just score
+  a position it is handed.
+- **Backend.** `game.py` gained a `drop` rule and a `Match` that advances one move at a time,
+  re-evaluating with the existing `evaluate` after every move. `main.py` adds a `/ws/{room}`
+  endpoint that seats two players per room, broadcasts the full state after every change, and
+  tells a third visitor the room is full. `/evaluate_board_state` is unchanged. Covered by
+  `test_ws.py`, which runs every socket on one event loop like uvicorn does.
+- **Frontend.** The browser no longer owns the board or calls the evaluate endpoint. It joins
+  the room named in the URL, renders whatever state the server sends, and only lets you drop a
+  chip on your turn. `room.ts` holds the protocol types and room/token helpers; `App.test.tsx`
+  drives the UI through a fake WebSocket.
+- **Verified** with `pytest` and `npm test`, plus two real WebSocket clients against a running
+  uvicorn, both directly and through the Vite proxy.

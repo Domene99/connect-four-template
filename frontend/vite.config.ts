@@ -9,6 +9,7 @@ export default defineConfig({
     // Forward API calls to the backend so the browser never needs CORS.
     proxy: {
       "/evaluate_board_state": "http://localhost:8080",
+      "/ws": { target: "ws://localhost:8080", ws: true },
     },
   },
   test: {
